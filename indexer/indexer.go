@@ -3,7 +3,6 @@ package indexer
 import (
 	"document-indexer-service/dynamodb"
 	"document-indexer-service/object"
-	"fmt"
 	"strings"
 )
 
@@ -82,6 +81,15 @@ func UpdateInvertedIndexMappingsFromDocument(objectKey string, document *object.
 
 // Manual operations
 
+func ReadInvertedIndex(term, tableName string) (*dynamodb.InvertedIndex, error) {
+	resInvertedIndex, err := dynamodb.ReadItem(term, tableName)
+	if err != nil {
+		return nil, err
+	}
+
+	return resInvertedIndex, nil
+}
+
 func UpdateInvertedIndex(updatedInvertedIndex dynamodb.InvertedIndex, tableName string) (bool, error) {
 	_, err := dynamodb.UpdateItem(updatedInvertedIndex, tableName)
 	if err != nil {
@@ -91,7 +99,7 @@ func UpdateInvertedIndex(updatedInvertedIndex dynamodb.InvertedIndex, tableName 
 	return true, nil
 }
 
-func DeleteInvertedIndex(deleteTerm string, tableName string) (bool, error) {
+func DeleteInvertedIndex(deleteTerm, tableName string) (bool, error) {
 	_, err := dynamodb.DeleteItem(deleteTerm, tableName)
 	if err != nil {
 		return false, err
@@ -122,7 +130,6 @@ func parseTextUpdateDocumentTermMatrix(terms []string, objectKey string, generat
 			updatedDocumentTermLocations := documentTermMatrix.DocumentTermLocations
 
 			updatedDocumentIDs, documentIndex, termExistsInDocument, err := updateDocumentIDInDocumentTermMatrix(objectKey, updatedDocumentIDs)
-			fmt.Println(documentIndex)
 			if err != nil {
 				return err
 			}
