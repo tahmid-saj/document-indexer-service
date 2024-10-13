@@ -1,15 +1,14 @@
 package object
 
 import (
-	"bytes"
 	"context"
-	"encoding/csv"
+	"document-indexer-service/utils"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
-	"document-indexer-service/utils"
 	"os"
 	"path/filepath"
 
@@ -17,6 +16,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
+
+type Document struct {
+	Title string `json:"title"`
+	Content string `json:"content"`
+}
 
 func ListObjects(s3Client *s3.Client, bucketName string) ([]types.Object, error) {
 	result, err := s3Client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
@@ -67,7 +71,7 @@ func DownloadObject(s3Client *s3.Client, bucketName string, objectKey string, fi
 	return err
 }
 
-func ReadObject(s3Client *s3.Client, bucketName string, objectKey string) ([][]string, error) {
+func ReadObject(s3Client *s3.Client, bucketName string, objectKey string) (*Document, error) {
 	readRequestInput := &s3.GetObjectInput{
 		Bucket: aws.String(bucketName),
 		Key: aws.String(objectKey),
@@ -86,14 +90,11 @@ func ReadObject(s3Client *s3.Client, bucketName string, objectKey string) ([][]s
 		return nil, err
 	}
 
-	reader := csv.NewReader(bytes.NewBuffer(body))
-	rows, err := reader.ReadAll()
-	if err != nil {
-		log.Printf("Couldn't read object %v. %v.\n", objectKey, err)
-		return nil, err
-	}
+	var document Document
 
-	return rows, nil
+	json.Unmarshal(body, &document)
+
+	return &document, nil
 }
 
 func ListObjectVersions(s3Client *s3.Client, bucketName string) ([]types.ObjectVersion, error) {
