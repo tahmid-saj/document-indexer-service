@@ -14,11 +14,15 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 )
 
-type TrieNode struct {
-	Prefix          string
-	FrequentQueries map[string]int
-	ChildNodes      []string
-	LeafNode        bool
+type InvertedIndex struct {
+	Term          string
+	DocumentTermMatrix DocumentTermMatrix
+}
+
+type DocumentTermMatrix struct {
+	DocumentIDs []string
+	DocumentTermFrequencies []int
+	DocumentTermLocations [][]int
 }
 
 func ListTables() ([]string, error) {
@@ -85,17 +89,17 @@ func CreateTable(tableName string) (*dynamodb.CreateTableOutput, error) {
 	// Create DynamoDB client
 	svc := dynamodb.New(sess)
 
-	// Create the table input with "Prefix" as the primary key (HASH)
+	// Create the table input with "Term" as the primary key (HASH)
 	input := &dynamodb.CreateTableInput{
 		AttributeDefinitions: []*dynamodb.AttributeDefinition{
 			{
-				AttributeName: aws.String("Prefix"), // Define Prefix attribute
-				AttributeType: aws.String("S"),      // Prefix is a string (S)
+				AttributeName: aws.String("Term"), // Define Term attribute
+				AttributeType: aws.String("S"),      // Term is a string (S)
 			},
 		},
 		KeySchema: []*dynamodb.KeySchemaElement{
 			{
-				AttributeName: aws.String("Prefix"), // Primary key (HASH)
+				AttributeName: aws.String("Term"), // Primary key (HASH)
 				KeyType:       aws.String("HASH"),
 			},
 		},
@@ -116,7 +120,7 @@ func CreateTable(tableName string) (*dynamodb.CreateTableOutput, error) {
 	return result, nil
 }
 
-func AddItem(item TrieNode, tableName string) (*dynamodb.PutItemOutput, error) {
+func AddItem(item InvertedIndex, tableName string) (*dynamodb.PutItemOutput, error) {
 	// Initialize a session that the SDK will use to load
 	// credentials from the shared credentials file ~/.aws/credentials
 	// and region from the shared configuration file ~/.aws/config.
@@ -195,7 +199,7 @@ func getItems(fileName string) interface{} {
 	return items
 }
 
-func ReadItem(prefix, tableName string) (*TrieNode, error) {
+func ReadItem(term, tableName string) (*InvertedIndex, error) {
 	// Initialize a session that the SDK will use to load
 	// credentials from the shared credentials file ~/.aws/credentials
 	// and region from the shared configuration file ~/.aws/config.
@@ -209,8 +213,8 @@ func ReadItem(prefix, tableName string) (*TrieNode, error) {
 	result, err := svc.GetItem(&dynamodb.GetItemInput{
     TableName: aws.String(tableName),
     Key: map[string]*dynamodb.AttributeValue{
-			"Prefix": {
-				S: aws.String(prefix),
+			"Term": {
+				S: aws.String(term),
 			},
     },
 	})
@@ -220,11 +224,11 @@ func ReadItem(prefix, tableName string) (*TrieNode, error) {
 	}
 
 	if result.Item == nil {
-    msg := "Could not find '" + prefix + "'"
+    msg := "Could not find '" + term + "'"
     return nil, errors.New(msg)
 	}
 			
-	var item *TrieNode
+	var item *InvertedIndex
 
 	err = dynamodbattribute.UnmarshalMap(result.Item, &item)
 	if err != nil {
@@ -235,10 +239,8 @@ func ReadItem(prefix, tableName string) (*TrieNode, error) {
 	return item, nil
 }
 
-func UpdateItem(updatedValue TrieNode, tableName string) (*dynamodb.UpdateItemOutput, error) {
-	// Initialize a session that the SDK will use to load
-	// credentials from the shared credentials file ~/.aws/credentials
-	// and region from the shared configuration file ~/.aws/config.
+func UpdateItem(updatedValue InvertedIndex, tableName string) (*dynamodb.UpdateItemOutput, error) {
+	// Initialize a session for AWS credentials and config
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
@@ -246,18 +248,31 @@ func UpdateItem(updatedValue TrieNode, tableName string) (*dynamodb.UpdateItemOu
 	// Create DynamoDB client
 	svc := dynamodb.New(sess)
 
-	// Prepare FrequentQueries and ChildNodes for DynamoDB
-	frequentQueries := map[string]*dynamodb.AttributeValue{}
-	for k, v := range updatedValue.FrequentQueries {
-		frequentQueries[k] = &dynamodb.AttributeValue{
-			N: aws.String(fmt.Sprintf("%d", v)),
-		}
+	// Prepare DocumentIDs, DocumentTermFrequencies, and DocumentTermLocations for DynamoDB
+	documentIDs := []*dynamodb.AttributeValue{}
+	for _, docID := range updatedValue.DocumentTermMatrix.DocumentIDs {
+		documentIDs = append(documentIDs, &dynamodb.AttributeValue{
+			S: aws.String(docID),
+		})
 	}
 
-	childNodes := []*dynamodb.AttributeValue{}
-	for _, v := range updatedValue.ChildNodes {
-		childNodes = append(childNodes, &dynamodb.AttributeValue{
-			S: aws.String(v),
+	documentTermFrequencies := []*dynamodb.AttributeValue{}
+	for _, freq := range updatedValue.DocumentTermMatrix.DocumentTermFrequencies {
+		documentTermFrequencies = append(documentTermFrequencies, &dynamodb.AttributeValue{
+			N: aws.String(fmt.Sprintf("%d", freq)),
+		})
+	}
+
+	documentTermLocations := []*dynamodb.AttributeValue{}
+	for _, locations := range updatedValue.DocumentTermMatrix.DocumentTermLocations {
+		locs := []*dynamodb.AttributeValue{}
+		for _, loc := range locations {
+			locs = append(locs, &dynamodb.AttributeValue{
+				N: aws.String(fmt.Sprintf("%d", loc)),
+			})
+		}
+		documentTermLocations = append(documentTermLocations, &dynamodb.AttributeValue{
+			L: locs,
 		})
 	}
 
@@ -265,41 +280,41 @@ func UpdateItem(updatedValue TrieNode, tableName string) (*dynamodb.UpdateItemOu
 	input := &dynamodb.UpdateItemInput{
 		TableName: aws.String(tableName),
 		Key: map[string]*dynamodb.AttributeValue{
-			"Prefix": {
-				S: aws.String(updatedValue.Prefix),
+			"Term": {
+				S: aws.String(updatedValue.Term),
 			},
 		},
 		ExpressionAttributeNames: map[string]*string{
-			"#FQ": aws.String("FrequentQueries"),
-			"#CN": aws.String("ChildNodes"),
-			"#LN": aws.String("LeafNode"),
+			"#DTM": aws.String("DocumentTermMatrix"),
+			"#IDs": aws.String("DocumentIDs"),
+			"#Frequencies": aws.String("DocumentTermFrequencies"),
+			"#Locations": aws.String("DocumentTermLocations"),
 		},
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-			":fq": {
-				M: frequentQueries, // map of frequent queries
+			":ids": {
+				L: documentIDs, // list of document IDs
 			},
-			":cn": {
-				L: childNodes, // list of child nodes
+			":freqs": {
+				L: documentTermFrequencies, // list of document term frequencies
 			},
-			":ln": {
-				BOOL: aws.Bool(updatedValue.LeafNode), // LeafNode value
+			":locs": {
+				L: documentTermLocations, // list of document term locations
 			},
 		},
-		UpdateExpression: aws.String("SET #FQ = :fq, #CN = :cn, #LN = :ln"),
+		UpdateExpression: aws.String("SET #DTM.#IDs = :ids, #DTM.#Frequencies = :freqs, #DTM.#Locations = :locs"),
 		ReturnValues:     aws.String("UPDATED_NEW"),
 	}
 
-	// Execute the update
+	// Execute the UpdateItem request
 	result, err := svc.UpdateItem(input)
 	if err != nil {
-		log.Printf("Failed to update item: %v", err)
 		return nil, err
 	}
 
 	return result, nil
 }
 
-func DeleteItem(prefix, tableName string) (*dynamodb.DeleteItemOutput, error) {
+func DeleteItem(term, tableName string) (*dynamodb.DeleteItemOutput, error) {
 	// Initialize a session that the SDK will use to load
 	// credentials from the shared credentials file ~/.aws/credentials
 	// and region from the shared configuration file ~/.aws/config.
@@ -312,8 +327,8 @@ func DeleteItem(prefix, tableName string) (*dynamodb.DeleteItemOutput, error) {
 
 	input := &dynamodb.DeleteItemInput{
     Key: map[string]*dynamodb.AttributeValue{
-			"Prefix": {
-				S: aws.String(prefix),
+			"Term": {
+				S: aws.String(term),
 			},
     },
     TableName: aws.String(tableName),
