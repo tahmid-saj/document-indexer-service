@@ -1,11 +1,64 @@
 package main
 
 import (
-	"document-indexer-service/dynamodb"
-	"fmt"
+
 )
 
 func main() {
+	// S3 ops
+	// s3Client, err := conf.ConfigureS3()
+	// if err != nil {
+	// 	return
+	// }
+
+	// ListBuckets
+	// buckets, err := bucket.ListBuckets(s3Client)
+	// if err != nil {
+	// 	return
+	// }
+	// PrintBuckets
+	// bucket.PrintBuckets(buckets)
+
+	// BucketExists
+	// _, err = bucket.BucketExists(s3Client, "document-indexer-service-test-documents")
+	// if err != nil {
+	// 	return
+	// }
+
+	// ListObjectsV2
+	// objects, err := object.ListObjects(s3Client, "document-indexer-service-test-documents")
+	// if err != nil {
+	// 	return
+	// }
+	// PrintObjects
+	// object.PrintObjects(objects)
+
+	// DownloadObject
+	// err = object.DownloadObject(s3Client, "document-indexer-service-test-documents", "lorem_ipsum_1.txt", "downloaded_obj.txt")
+	// if err != nil {
+	// 	return
+	// }
+
+	// ReadObject
+	// resObject, err := object.ReadObject(s3Client, "document-indexer-service-test-documents", "lorem_ipsum_1.json")
+	// if err != nil {
+	// 	return
+	// }
+	// fmt.Print(resObject.Content)
+
+	// ListObjectVersions
+	// objectVersions, err := object.ListObjectVersions(s3Client, "document-indexer-service-test-documents")
+	// if err != nil {
+	// 	return
+	// }
+	// object.PrintObjectVersions(objectVersions)
+
+	// UploadObject
+	// err = object.UploadObject(s3Client, "document-indexer-service-test-documents", "lorem_ipsum_5.txt", "downloaded_obj.txt")
+	// if err != nil {
+	// 	return
+	// }
+
 	// DynamoDB ops
 	// CreateTable
 	// createdTable, err := dynamodb.CreateTable("document-indexer-index-mapping")
