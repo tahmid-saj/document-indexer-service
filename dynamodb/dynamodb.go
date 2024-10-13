@@ -18,14 +18,14 @@ type Term string
 type InvertedIndexMappings map[Term]DocumentTermMatrix
 
 type InvertedIndex struct {
-	Term          string
-	DocumentTermMatrix DocumentTermMatrix
+	Term          string `json:"term"`
+	DocumentTermMatrix DocumentTermMatrix `json:"documentTermMatrix"`
 }
 
 type DocumentTermMatrix struct {
-	DocumentIDs []string
-	DocumentTermFrequencies []int
-	DocumentTermLocations [][]int
+	DocumentIDs []string `json:"documentIDs"`
+	DocumentTermFrequencies []int `json:"documentTermFrequencies"`
+	DocumentTermLocations [][]int `json:"documentTermLocations"`
 }
 
 func ListTables() ([]string, error) {

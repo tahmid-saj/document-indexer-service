@@ -1,7 +1,11 @@
 package main
 
 import (
+	"document-indexer-service/routes"
+	"os"
 
+	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func main() {
@@ -125,4 +129,12 @@ func main() {
 	// 	return
 	// }
 	// fmt.Print(invertedIndexMappings)
+
+	godotenv.Load()
+
+	server := gin.Default()
+
+	routes.RegisterRoutes(server)
+
+	server.Run(os.Getenv("PORT"))
 }
