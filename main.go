@@ -118,4 +118,11 @@ func main() {
 	// 	return
 	// }
 	// fmt.Print(deletedItem)
+
+	// indexer ops
+	// invertedIndexMappings, err := indexer.UpdateInvertedIndexMappingsFromDocuments("document-indexer-index-mapping", "document-indexer-service-test-documents")
+	// if err != nil {
+	// 	return
+	// }
+	// fmt.Print(invertedIndexMappings)
 }
