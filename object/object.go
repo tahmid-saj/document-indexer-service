@@ -9,7 +9,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"logging-service/utils"
+	"document-indexer-service/utils"
 	"os"
 	"path/filepath"
 
