@@ -14,6 +14,9 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 )
 
+type Term string
+type InvertedIndexMappings map[Term]DocumentTermMatrix
+
 type InvertedIndex struct {
 	Term          string
 	DocumentTermMatrix DocumentTermMatrix
