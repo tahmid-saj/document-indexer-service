@@ -8,6 +8,40 @@ Document indexer service to generate inverted index mappings (document term matr
 ## Directory structure
 
 The directory structure is as follows:
+### Root Directory
+- **README.md**: Overview of the project and instructions for use.
+- **go.mod**: Go module file specifying project dependencies.
+- **go.sum**: Hashes of dependencies for module integrity.
+- **main.go**: Entry point of the application.
+
+### Directories
+
+#### bucket/
+- Contains code for interacting with S3 buckets where documents are stored.
+
+#### conf/
+- Configuration files for the application, including S3 and DynamoDB settings.
+
+#### data/
+- Directory for storing local data related to the indexing process.
+
+#### dynamodb/
+- Code for handling interactions with DynamoDB, which stores the inverted index.
+
+#### indexer/
+- Core logic for indexing documents, creating the inverted index mappings.
+
+#### models/
+- Data models defining the structure of documents, terms, and indexes.
+
+#### object/
+- Contains code for handling object-level operations, likely related to S3.
+
+#### routes/
+- Defines API routes using Gin for exposing the indexing service.
+
+#### utils/
+- Utility functions and helpers for general use throughout the codebase.
 
 <br/>
 <br/>
